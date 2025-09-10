@@ -15,31 +15,45 @@ const SparkleIcon: React.FC<{ className?: string }> = ({ className }) => (
 interface HeaderProps {
   onConnectWallet: () => void;
   walletAddress: string | null;
+  onNavigateToDashboard: () => void;
+  onNavigateHome: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onConnectWallet, walletAddress }) => {
+const Header: React.FC<HeaderProps> = ({ onConnectWallet, walletAddress, onNavigateToDashboard, onNavigateHome }) => {
   const tooltipText = walletAddress ? `Connected: ${walletAddress}` : 'Connect your Web3 wallet to mint NFTs.';
   
   return (
     <header className="w-full py-4 px-4 sm:px-8 border-b border-gray-700 bg-gray-800/30 backdrop-blur-sm sticky top-0 z-50 flex items-center justify-between">
-      <div className="flex items-center gap-3">
+      <button onClick={onNavigateHome} className="flex items-center gap-3">
           <SparkleIcon className="w-6 h-6 text-blue-400" />
           <h1 className="text-xl font-bold tracking-tight text-gray-100">
             Pixshop
           </h1>
+      </button>
+      <div className="flex items-center gap-3">
+        {walletAddress && (
+          <Tooltip text="View your created NFTs">
+            <button
+              onClick={onNavigateToDashboard}
+              className="hidden sm:block bg-white/10 border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out hover:bg-white/20 hover:border-white/30 active:scale-95 text-sm"
+            >
+              Dashboard
+            </button>
+          </Tooltip>
+        )}
+        <Tooltip text={tooltipText}>
+          <button 
+            onClick={onConnectWallet}
+            className="flex items-center gap-2 bg-white/10 border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out hover:bg-white/20 hover:border-white/30 active:scale-95 text-sm"
+          >
+            <WalletIcon className="w-5 h-5" />
+            {walletAddress 
+              ? `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`
+              : 'Connect Wallet'
+            }
+          </button>
+        </Tooltip>
       </div>
-      <Tooltip text={tooltipText}>
-        <button 
-          onClick={onConnectWallet}
-          className="flex items-center gap-2 bg-white/10 border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out hover:bg-white/20 hover:border-white/30 active:scale-95 text-sm"
-        >
-          <WalletIcon className="w-5 h-5" />
-          {walletAddress 
-            ? `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`
-            : 'Connect Wallet'
-          }
-        </button>
-      </Tooltip>
     </header>
   );
 };
