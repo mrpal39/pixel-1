@@ -11,6 +11,31 @@ declare global {
   }
 }
 
+// Mock the window.ethereum object for development environments where a Web3 wallet is not installed.
+// This allows testing of wallet-related UI and functionality without a real wallet connection.
+if (typeof window.ethereum === 'undefined') {
+  console.log("No wallet found. Injecting mock window.ethereum for development.");
+  window.ethereum = {
+    // A mock request handler
+    request: async ({ method }: { method: string; params?: any[] }) => {
+      console.log(`Mock ethereum.request called for method: ${method}`);
+      // Handle account requests by returning a dummy address
+      if (method === 'eth_requestAccounts' || method === 'eth_accounts') {
+        return ['0x1234567890123456789012345678901234567890'];
+      }
+      // For any other method, return null or throw an error as needed
+      return null;
+    },
+    // Mock event listeners
+    on: (eventName: string, listener: (...args: any[]) => void) => {
+      console.log(`Mock ethereum.on: Listener registered for ${eventName}`);
+    },
+    removeListener: (eventName: string, listener: (...args: any[]) => void) => {
+      console.log(`Mock ethereum.removeListener: Listener removed for ${eventName}`);
+    },
+  };
+}
+
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
