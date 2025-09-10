@@ -5,9 +5,9 @@
 
 import React, { useState, useMemo } from 'react';
 import JSZip from 'jszip';
-import { Hair, Eyes, Mouth } from './CharacterAssets';
-import CharacterThumbnail from './CharacterThumbnail';
-import Spinner from './Spinner';
+import { Hair, Eyes, Mouth } from '../CharacterAssets';
+import CharacterThumbnail from '../CharacterThumbnail';
+import Spinner from '../Spinner';
 
 // --- Type Definitions ---
 type Trait = { trait_type: string; value: string };

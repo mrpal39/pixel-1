@@ -4,9 +4,9 @@
 */
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Body, Hair, Eyes, Mouth } from './CharacterAssets';
-import { dataURLtoFile } from '../App';
-import Spinner from './Spinner';
+import { Body, Hair, Eyes, Mouth } from '../CharacterAssets';
+import { dataURLtoFile } from '../../App';
+import Spinner from '../Spinner';
 
 type Trait = { trait_type: string; value: string };
 

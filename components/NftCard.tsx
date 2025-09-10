@@ -4,8 +4,7 @@
 */
 
 import React from 'react';
-
-type Trait = { trait_type: string; value: string };
+import { Trait } from '../App';
 
 interface NftCardProps {
     nft: {
@@ -13,11 +12,15 @@ interface NftCardProps {
         title: string;
         properties: Trait[];
     };
+    onClick: () => void;
 }
 
-const NftCard: React.FC<NftCardProps> = ({ nft }) => {
+const NftCard: React.FC<NftCardProps> = ({ nft, onClick }) => {
     return (
-        <div className="bg-gray-800/50 rounded-lg overflow-hidden border border-gray-700/80 transition-all duration-300 hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-1">
+        <button 
+            onClick={onClick}
+            className="bg-gray-800/50 rounded-lg overflow-hidden border border-gray-700/80 transition-all duration-300 hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500 text-left"
+        >
             <img src={nft.imageUrl} alt={nft.title} className="w-full aspect-square object-cover" />
             <div className="p-4">
                 <h3 className="font-bold text-lg text-white truncate">{nft.title}</h3>
@@ -32,7 +35,7 @@ const NftCard: React.FC<NftCardProps> = ({ nft }) => {
                     </div>
                 )}
             </div>
-        </div>
+        </button>
     );
 };
 

@@ -4,11 +4,11 @@
 */
 
 import React, { useState, useMemo } from 'react';
-import NftCard from './NftCard';
-import { MagicWandIcon, SearchIcon, SortIcon } from './icons';
+import NftCard from '../components/NftCard';
+import { MagicWandIcon, SearchIcon, SortIcon } from '../components/icons';
 import { MintedNft } from '../App';
 
-interface DashboardProps {
+interface DashboardPageProps {
   nfts: MintedNft[];
   onCreateNew: () => void;
   onViewNftDetail: (nftIndex: number) => void;
@@ -16,7 +16,7 @@ interface DashboardProps {
 
 type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc';
 
-const Dashboard: React.FC<DashboardProps> = ({ nfts, onCreateNew, onViewNftDetail }) => {
+const DashboardPage: React.FC<DashboardPageProps> = ({ nfts, onCreateNew, onViewNftDetail }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('date-desc');
 
@@ -129,4 +129,4 @@ const Dashboard: React.FC<DashboardProps> = ({ nfts, onCreateNew, onViewNftDetai
     );
 };
 
-export default Dashboard;
+export default DashboardPage;
