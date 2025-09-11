@@ -25,6 +25,7 @@ import { addNft } from './store/nftsSlice';
 import { setIsMintingModalOpen } from './store/uiSlice';
 import { silentConnect, handleAccountsChanged } from './store/walletActions';
 import * as polygonService from './services/polygonService';
+import { DEFAULT_CONTRACT_ADDRESS, DEFAULT_NETWORK } from './services/polygonService';
 import Header from './components/Header';
 import MintingModal from './components/MintingModal';
 import HomePage from './pages/HomePage';
@@ -196,11 +197,11 @@ const App: React.FC = () => {
           return;
       }
 
-      const contractAddress = localStorage.getItem('pixshop-contract-address');
-      const networkName = localStorage.getItem('pixshop-network');
+      const contractAddress = localStorage.getItem('pixshop-contract-address') || DEFAULT_CONTRACT_ADDRESS;
+      const networkName = (localStorage.getItem('pixshop-network') as 'polygon-mainnet' | 'polygon-mumbai' | null) || DEFAULT_NETWORK;
 
-      if (!contractAddress || !networkName) {
-          setStatus({ step: 'error', message: 'Please configure your Contract Address and Network in the "Minter" tab on the Home page before minting.' });
+      if (!contractAddress || contractAddress === '0x...' || contractAddress.trim() === '') {
+          setStatus({ step: 'error', message: 'Contract address is not configured. Please set it in the "Minter" tab on the Home page, or update the placeholder in the services/polygonService.ts file.' });
           return;
       }
 

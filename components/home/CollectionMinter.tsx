@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import * as polygonService from '../../services/polygonService';
+import { DEFAULT_CONTRACT_ADDRESS, DEFAULT_NETWORK } from '../../services/polygonService';
 import Tooltip from '../Tooltip';
 import MintingProgressModal from '../MintingProgressModal';
 
@@ -49,10 +50,14 @@ const CollectionMinter: React.FC = () => {
     useEffect(() => {
         const savedContract = localStorage.getItem('pixshop-contract-address');
         const savedNetwork = localStorage.getItem('pixshop-network');
-        if (savedContract) setContractAddress(savedContract);
+
+        setContractAddress(savedContract || DEFAULT_CONTRACT_ADDRESS);
+
         // Fix: Validate the saved network from localStorage before setting state.
         if (savedNetwork === 'polygon-mainnet' || savedNetwork === 'polygon-mumbai') {
             setNetwork(savedNetwork);
+        } else {
+            setNetwork(DEFAULT_NETWORK);
         }
     }, []);
 

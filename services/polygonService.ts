@@ -11,6 +11,10 @@ import { MintingStatus } from '../App';
 // The NFT.Storage API key is retrieved from an environment variable for security.
 const NFT_STORAGE_TOKEN = process.env.NFT_STORAGE_TOKEN;
 
+// IMPORTANT: Replace this with your deployed ERC-721 contract address.
+// This is used as a fallback if no address is configured in the Minter tab.
+export const DEFAULT_CONTRACT_ADDRESS = '0x...'; // Replace with your contract address
+
 const NETWORKS = {
     'polygon-mainnet': {
         chainId: '0x89', // Hex for 137 (Polygon Mainnet)
@@ -29,6 +33,10 @@ const NETWORKS = {
 };
 
 type NetworkName = keyof typeof NETWORKS;
+
+// The default network to use. 'polygon-mumbai' is safer for testing.
+export const DEFAULT_NETWORK: NetworkName = 'polygon-mumbai';
+
 
 // --- Contract ABI ---
 // A minimal ABI for a standard ERC-721 contract with a safeMint function.
