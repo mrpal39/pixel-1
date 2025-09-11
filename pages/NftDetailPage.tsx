@@ -6,7 +6,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MintedNft } from '../App';
-import { ArrowLeftIcon } from '../components/icons';
+import { ArrowLeftIcon, ExternalLinkIcon } from '../components/icons';
 
 interface NftDetailPageProps {
   nft: MintedNft;
@@ -46,6 +46,19 @@ const NftDetailPage: React.FC<NftDetailPageProps> = ({ nft }) => {
                     <div className="text-sm text-gray-400">
                         <span className="font-semibold">Minted on:</span> {formattedDate}
                     </div>
+
+                    {nft.transactionHash && (
+                        <div>
+                             <a 
+                                href={`https://mumbai.polygonscan.com/tx/${nft.transactionHash}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 text-sm bg-blue-500/10 text-blue-300 font-semibold py-2 px-3 rounded-lg hover:bg-blue-500/20 transition-colors border border-blue-500/20"
+                              >
+                                View on PolygonScan <ExternalLinkIcon className="w-4 h-4" />
+                              </a>
+                        </div>
+                    )}
 
                     {nft.description && (
                         <div>

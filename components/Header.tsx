@@ -17,9 +17,10 @@ interface HeaderProps {
   onConnectWallet: () => void;
   onDisconnectWallet: () => void;
   walletAddress: string | null;
+  isEditing: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ onConnectWallet, onDisconnectWallet, walletAddress }) => {
+const Header: React.FC<HeaderProps> = ({ onConnectWallet, onDisconnectWallet, walletAddress, isEditing }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -56,6 +57,16 @@ const Header: React.FC<HeaderProps> = ({ onConnectWallet, onDisconnectWallet, wa
           </h1>
       </Link>
       <div className="flex items-center gap-3">
+        {isEditing && (
+           <Tooltip text="Return to the editor">
+             <Link
+               to="/editor"
+               className="hidden sm:block bg-white/10 border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out hover:bg-white/20 hover:border-white/30 active:scale-95 text-sm"
+             >
+               Editor
+             </Link>
+           </Tooltip>
+        )}
         {walletAddress && (
           <Tooltip text="View your created NFTs">
             <Link
