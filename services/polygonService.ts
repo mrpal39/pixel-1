@@ -8,20 +8,8 @@ import { NFTStorage, File as NFTFile } from 'nft.storage';
 import { MintingStatus } from '../App';
 
 // --- Configuration ---
-// ###################################################################################
-// # IMPORTANT: SECURITY WARNING                                                     #
-// ###################################################################################
-// # You must replace the placeholder API key below with your own from NFT.Storage.  #
-// # For production applications, it is CRITICAL to move this key to a secure        #
-// # backend or environment variable to prevent it from being exposed in client-side #
-// # code.                                                                           #
-// #                                                                                 #
-// # 1. Go to https://nft.storage/                                                   #
-// # 2. Sign up or log in.                                                           #
-// # 3. Create a new API key.                                                        #
-// # 4. Replace the value below.                                                     #
-// ###################################################################################
-const NFT_STORAGE_TOKEN = 'YOUR_NFT_STORAGE_API_KEY_HERE';
+// The NFT.Storage API key is retrieved from an environment variable for security.
+const NFT_STORAGE_TOKEN = process.env.NFT_STORAGE_TOKEN;
 
 const NETWORKS = {
     'polygon-mainnet': {
@@ -50,10 +38,8 @@ const contractABI = [
 ];
 
 // --- NFT.Storage Client ---
-let nftStorageClient: NFTStorage | null = null;
-if (NFT_STORAGE_TOKEN && NFT_STORAGE_TOKEN !== 'YOUR_NFT_STORAGE_API_KEY_HERE') {
-    nftStorageClient = new NFTStorage({ token: NFT_STORAGE_TOKEN });
-}
+// Initialize the client only if the token is provided.
+const nftStorageClient = NFT_STORAGE_TOKEN ? new NFTStorage({ token: NFT_STORAGE_TOKEN }) : null;
 
 /**
  * Prompts the user to switch their wallet's network.
@@ -152,7 +138,7 @@ export const mintNftOnPolygon = async (
 ): Promise<ethers.ContractTransactionReceipt | null> => {
     if (!window.ethereum) throw new Error("No crypto wallet found");
     if (!nftStorageClient) {
-        throw new Error("NFT.Storage API Key is not set. Please add your key to services/polygonService.ts");
+        throw new Error("NFT.Storage API Key is not configured. Minting is disabled.");
     }
     if (!ethers.isAddress(config.contractAddress)) {
         throw new Error("Invalid Contract Address provided. Please configure it in the Minter tab.");
