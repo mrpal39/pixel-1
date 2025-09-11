@@ -65,7 +65,7 @@ const MintingModal: React.FC<MintingModalProps> = ({ imageUrl, onClose, onMint, 
               <p className="text-gray-300">{status.message}</p>
               {status.txHash && (
                 <a 
-                  href={`https://mumbai.polygonscan.com/tx/${status.txHash}`} 
+                  href={`https://polygonscan.com/tx/${status.txHash}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="mt-2 flex items-center gap-2 bg-blue-500/20 text-blue-300 font-semibold py-2 px-4 rounded-lg hover:bg-blue-500/40 transition-colors"

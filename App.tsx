@@ -11,38 +11,19 @@ declare global {
   }
 }
 
-// Mock the window.ethereum object for development environments where a Web3 wallet is not installed.
-// This allows testing of wallet-related UI and functionality without a real wallet connection.
-if (typeof window.ethereum === 'undefined') {
-  console.log("No wallet found. Injecting mock window.ethereum for development.");
-  window.ethereum = {
-    // A mock request handler
-    request: async ({ method }: { method: string; params?: any[] }) => {
-      console.log(`Mock ethereum.request called for method: ${method}`);
-      // Handle account requests by returning a dummy address
-      if (method === 'eth_requestAccounts' || method === 'eth_accounts') {
-        return ['0x1234567890123456789012345678901234567890'];
-      }
-      if (method === 'net_version' || method === 'eth_chainId') {
-        return '80001'; // Mock Polygon Mumbai chain ID
-      }
-      // For any other method, return null or throw an error as needed
-      return null;
-    },
-    // Mock event listeners
-    on: (eventName: string, listener: (...args: any[]) => void) => {
-      console.log(`Mock ethereum.on: Listener registered for ${eventName}`);
-    },
-    removeListener: (eventName: string, listener: (...args: any[]) => void) => {
-      console.log(`Mock ethereum.removeListener: Listener removed for ${eventName}`);
-    },
-  };
-}
-
-
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useParams, useLocation } from "react-router-dom";
-import * as geminiService from './services/geminiService';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from './store';
+import {
+  setHistoryState,
+  resetHistory,
+  setIsLoading,
+  setError,
+} from './store/editorSlice';
+import { addNft } from './store/nftsSlice';
+import { setIsMintingModalOpen } from './store/uiSlice';
+import { silentConnect, handleAccountsChanged } from './store/walletActions';
 import * as polygonService from './services/polygonService';
 import Header from './components/Header';
 import MintingModal from './components/MintingModal';
@@ -51,6 +32,10 @@ import EditorPage from './pages/EditorPage';
 import DashboardPage from './pages/DashboardPage';
 import NftDetailPage from './pages/NftDetailPage';
 import Spinner from './components/Spinner';
+
+// Re-export core types from slices for other components to use
+import { Trait, MintedNft } from './store/nftsSlice';
+export type { Trait, MintedNft };
 
 
 const SESSION_STORAGE_KEY = 'pixshop-session';
@@ -82,16 +67,6 @@ const fileToDataURL = (file: File): Promise<string> => {
     });
 };
 
-export type Trait = { trait_type: string; value: string };
-export type MintedNft = {
-  title: string;
-  description: string;
-  properties: Trait[];
-  imageUrl: string; // Data URL of the minted image
-  mintDate: number; // Timestamp of when it was minted
-  transactionHash?: string; // On-chain transaction hash
-};
-
 export type MintingStatus = {
   step: 'idle' | 'network' | 'uploading' | 'confirming' | 'minting' | 'success' | 'error';
   message: string;
@@ -99,18 +74,12 @@ export type MintingStatus = {
 };
 
 const App: React.FC = () => {
-  const [history, setHistory] = useState<File[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // For non-minting loads
-  const [error, setError] = useState<string | null>(null);
+  const dispatch: AppDispatch = useDispatch();
+  const { history, historyIndex, isLoading } = useSelector((state: RootState) => state.editor);
+  const { walletAddress } = useSelector((state: RootState) => state.wallet);
+  const { myNfts } = useSelector((state: RootState) => state.nfts);
+  const { isMintingModalOpen, nftTraits } = useSelector((state: RootState) => state.ui);
   
-  // Web3 State
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [isMintingModalOpen, setIsMintingModalOpen] = useState(false);
-  const [nftTraits, setNftTraits] = useState<Trait[]>([]);
-  const [myNfts, setMyNfts] = useState<MintedNft[]>([]);
-  
-  // App navigation
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -118,58 +87,41 @@ const App: React.FC = () => {
   useEffect(() => {
     const { ethereum } = window;
     if (!ethereum) {
+        dispatch(setIsLoading(false));
         return;
     };
 
-    const silentConnect = async () => {
-        try {
-            const accounts = await ethereum.request({ method: 'eth_accounts' });
-            if (accounts && accounts.length > 0) {
-                console.log("Wallet silently reconnected:", accounts[0]);
-                handleWalletConnected(accounts[0]);
-            }
-        } catch (err) {
-            console.error("Silent wallet connection failed:", err);
-        } finally {
-            setIsLoading(false);
+    const onAccountsChanged = (accounts: string[]) => {
+      // Dispatch the thunk to handle the logic
+      dispatch(handleAccountsChanged(accounts));
+      
+      // Handle navigation side-effect in the component
+      if (accounts.length > 0) {
+        // If user switches account while on a dashboard/nft page, send them home
+        if (location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/nft/')) {
+          navigate('/');
         }
+      } else {
+        // If user disconnects, send them home
+        navigate('/');
+      }
     };
     
-    const handleAccountsChanged = (accounts: string[]) => {
-        if (accounts.length > 0) {
-            console.log("Wallet account changed to:", accounts[0]);
-            handleWalletConnected(accounts[0]);
-            // If the user is on a page that depends on wallet state, navigate home
-            if (location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/nft/')) {
-                navigate('/');
-            }
-        } else {
-            console.log("Wallet disconnected.");
-            handleDisconnectWallet();
-        }
-    };
+    // Dispatch thunk to check for existing connection on page load
+    dispatch(silentConnect());
 
-    silentConnect();
-
-    ethereum.on('accountsChanged', handleAccountsChanged);
+    ethereum.on('accountsChanged', onAccountsChanged);
     return () => {
-        ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        ethereum.removeListener('accountsChanged', onAccountsChanged);
     };
-  }, [navigate, location.pathname]);
+  }, [dispatch, navigate, location.pathname]);
 
-  // Load NFTs from localStorage on wallet connect
+  // Save NFTs to localStorage whenever the list changes (e.g., after minting or reordering)
   useEffect(() => {
-      if (walletAddress) {
-          const storedNfts = localStorage.getItem(`nfts-${walletAddress}`);
-          if (storedNfts) {
-              setMyNfts(JSON.parse(storedNfts));
-          } else {
-              setMyNfts([]);
-          }
-      } else {
-          setMyNfts([]);
-      }
-  }, [walletAddress]);
+    if (walletAddress) {
+        localStorage.setItem(`nfts-${walletAddress}`, JSON.stringify(myNfts));
+    }
+  }, [myNfts, walletAddress]);
 
 
   // Session loading effect
@@ -181,8 +133,7 @@ const App: React.FC = () => {
             if (Array.isArray(savedHistoryFiles) && savedHistoryFiles.length > 0) {
                 const filePromises = savedHistoryFiles.map(async (dataUrl, i) => dataURLtoFile(dataUrl, `session-img-${i}.png`));
                 Promise.all(filePromises).then(files => {
-                    setHistory(files);
-                    setHistoryIndex(savedIndex);
+                    dispatch(setHistoryState({ history: files, historyIndex: savedIndex }));
                     if (location.pathname === '/') {
                         navigate('/editor');
                     }
@@ -193,9 +144,12 @@ const App: React.FC = () => {
         console.error("Failed to load session:", err);
         sessionStorage.removeItem(SESSION_STORAGE_KEY);
     } finally {
-        setIsLoading(false);
+        // Only set loading to false if silentConnect hasn't already
+        if (isLoading) {
+            dispatch(setIsLoading(false));
+        }
     }
-  }, [navigate, location.pathname]);
+  }, [dispatch, navigate, location.pathname, isLoading]);
 
   // Session saving effect
   useEffect(() => {
@@ -217,86 +171,22 @@ const App: React.FC = () => {
     saveSession();
   }, [history, historyIndex]);
 
-  const addImageToHistory = useCallback((newImageFile: File) => {
-    setHistory(currentHistory => {
-        const newHistory = currentHistory.slice(0, historyIndex + 1);
-        newHistory.push(newImageFile);
-        return newHistory;
-    });
-    setHistoryIndex(prevIndex => prevIndex + 1);
-  }, [historyIndex]);
-
-  const handleFileSelect = useCallback((files: FileList | null) => {
-    if (files && files[0]) {
-        const file = files[0];
-        // Reset history before starting new session
-        setHistory([file]);
-        setHistoryIndex(0);
-        navigate('/editor');
-    }
-  }, [navigate]);
-
-  const handleGenerateImage = useCallback(async (prompt: string) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-          const generatedImageUrl = await geminiService.generateImageFromText(prompt);
-          const newImageFile = dataURLtoFile(generatedImageUrl, `generated-${Date.now()}.png`);
-          setHistory([newImageFile]);
-          setHistoryIndex(0);
-          navigate('/editor');
-      } catch (err) {
-          setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-      } finally {
-          setIsLoading(false);
-      }
-  }, [navigate]);
-
-  const handleCharacterFinalized = useCallback((imageFile: File, traits: Trait[]) => {
-    setNftTraits(traits);
-    setHistory([imageFile]);
-    setHistoryIndex(0);
-    navigate('/editor');
-  }, [navigate]);
-
-  const handleConnectWallet = async () => {
-    if (window.ethereum) {
-        try {
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            handleWalletConnected(accounts[0]);
-        } catch (error) {
-            console.error("Wallet connection failed:", error);
-            setError("Failed to connect wallet. Please try again.");
-        }
-    } else {
-        setError("Please install a Web3 wallet like MetaMask.");
-    }
-  };
-
-  const handleWalletConnected = (address: string) => {
-    setWalletAddress(address);
-  };
-  
-  const handleDisconnectWallet = () => {
-      setWalletAddress(null);
-      setMyNfts([]);
-      navigate('/');
-  };
   
   const handleUploadNew = () => {
-    // Clear session and navigate home
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    setHistory([]);
-    setHistoryIndex(-1);
+    dispatch(resetHistory());
     navigate('/');
   };
   
   const handleOpenMintModal = () => {
     if (!walletAddress) {
-        handleConnectWallet();
+        // The header's connect button dispatches the connect thunk directly,
+        // but we can also trigger it from here if needed.
+        // For now, let's assume the user clicks the header button first.
+        dispatch(setError("Please connect your wallet to mint."));
         return;
     }
-    setIsMintingModalOpen(true);
+    dispatch(setIsMintingModalOpen(true));
   };
 
   const handleConfirmMint = async (metadata: { title: string, description: string, properties: Trait[] }, setStatus: (status: MintingStatus) => void) => {
@@ -317,16 +207,12 @@ const App: React.FC = () => {
               title: metadata.title,
               description: metadata.description,
               properties: metadata.properties,
-              imageUrl: URL.createObjectURL(currentImageFile), // Create a stable URL for the dashboard
+              imageUrl: URL.createObjectURL(currentImageFile),
               mintDate: Date.now(),
               transactionHash: receipt.hash,
           };
-
-          const updatedNfts = [...myNfts, newNft];
-          setMyNfts(updatedNfts);
-          if (walletAddress) {
-              localStorage.setItem(`nfts-${walletAddress}`, JSON.stringify(updatedNfts));
-          }
+          
+          dispatch(addNft(newNft));
           
           setStatus({ step: 'success', message: 'Your NFT has been successfully minted!', txHash: receipt.hash });
 
@@ -355,30 +241,13 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center">
-      <Header 
-        onConnectWallet={handleConnectWallet} 
-        onDisconnectWallet={handleDisconnectWallet}
-        walletAddress={walletAddress}
-        isEditing={history.length > 0}
-      />
+      <Header />
       <main className="w-full flex-grow p-4 sm:p-8">
         <Routes>
-          <Route path="/" element={
-            <HomePage 
-              onFileSelect={handleFileSelect} 
-              onGenerateImage={handleGenerateImage}
-              onCharacterFinalized={handleCharacterFinalized}
-              isLoading={isLoading} 
-            />} 
-          />
+          <Route path="/" element={<HomePage />} />
           <Route path="/editor" element={
             history.length > 0 ? (
               <EditorPage 
-                history={history}
-                historyIndex={historyIndex}
-                setHistory={setHistory}
-                setHistoryIndex={setHistoryIndex}
-                addImageToHistory={addImageToHistory}
                 onUploadNew={handleUploadNew}
                 onMint={handleOpenMintModal}
               />
@@ -386,7 +255,7 @@ const App: React.FC = () => {
           }/>
           <Route path="/dashboard" element={
             walletAddress ? (
-              <DashboardPage nfts={myNfts} />
+              <DashboardPage />
             ) : <Navigate to="/" />
           }/>
            <Route path="/nft/:index" element={
@@ -398,7 +267,7 @@ const App: React.FC = () => {
       {isMintingModalOpen && history[historyIndex] && (
         <MintingModal 
           imageUrl={URL.createObjectURL(history[historyIndex])}
-          onClose={() => setIsMintingModalOpen(false)}
+          onClose={() => dispatch(setIsMintingModalOpen(false))}
           onMint={handleConfirmMint}
           initialProperties={nftTraits}
         />

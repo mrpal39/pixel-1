@@ -5,6 +5,9 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { setIsLoading, setError, addImageToHistory, setHistoryIndex } from '../store/editorSlice';
 import * as geminiService from '../services/geminiService';
 import Spinner from '../components/Spinner';
 import FilterPanel from '../components/FilterPanel';
@@ -22,28 +25,20 @@ import { dataURLtoFile } from '../App';
 type Tab = 'generative fill' | 'magic eraser' | 'adjust' | 'filters' | 'style presets' | 'crop' | 'upscale';
 
 interface EditorPageProps {
-    history: File[];
-    historyIndex: number;
-    setHistory: React.Dispatch<React.SetStateAction<File[]>>;
-    setHistoryIndex: React.Dispatch<React.SetStateAction<number>>;
-    addImageToHistory: (newImageFile: File) => void;
     onUploadNew: () => void;
     onMint: () => void;
 }
 
 const EditorPage: React.FC<EditorPageProps> = ({
-    history,
-    historyIndex,
-    setHistoryIndex,
-    addImageToHistory,
     onUploadNew,
     onMint
 }) => {
+    const dispatch: AppDispatch = useDispatch();
+    const { history, historyIndex, isLoading, error } = useSelector((state: RootState) => state.editor);
+
     const [historyImageUrls, setHistoryImageUrls] = useState<string[]>([]);
     
     const [prompt, setPrompt] = useState<string>('');
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
     const [editHotspot, setEditHotspot] = useState<{ x: number, y: number } | null>(null);
     const [displayHotspot, setDisplayHotspot] = useState<{ x: number, y: number } | null>(null);
     const [activeTab, setActiveTab] = useState<Tab>('generative fill');
@@ -107,7 +102,7 @@ const EditorPage: React.FC<EditorPageProps> = ({
     }, [currentImageUrl, activeTab]);
     
     const addNewImage = useCallback((newImageFile: File, newTab?: Tab) => {
-        addImageToHistory(newImageFile);
+        dispatch(addImageToHistory(newImageFile));
         setCrop(undefined);
         setCompletedCrop(undefined);
         setMaskDataUrl(null);
@@ -116,14 +111,14 @@ const EditorPage: React.FC<EditorPageProps> = ({
           const ctx = canvasRef.current.getContext('2d');
           ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
         }
-      }, [addImageToHistory]);
+      }, [dispatch]);
 
     const handleGenerate = useCallback(async () => {
         const currentImage = history[historyIndex];
         if (!currentImage || !prompt.trim() || !editHotspot) return;
 
-        setIsLoading(true);
-        setError(null);
+        dispatch(setIsLoading(true));
+        dispatch(setError(null));
         try {
             const editedImageUrl = await geminiService.generateEditedImage(currentImage, prompt, editHotspot);
             const newImageFile = dataURLtoFile(editedImageUrl, `edited-${Date.now()}.png`);
@@ -131,59 +126,59 @@ const EditorPage: React.FC<EditorPageProps> = ({
             setEditHotspot(null);
             setDisplayHotspot(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            dispatch(setError(err instanceof Error ? err.message : 'An unknown error occurred.'));
         } finally {
-            setIsLoading(false);
+            dispatch(setIsLoading(false));
         }
-    }, [history, historyIndex, prompt, editHotspot, addNewImage]);
+    }, [history, historyIndex, prompt, editHotspot, addNewImage, dispatch]);
     
     const handleApplyFilter = useCallback(async (filterPrompt: string) => {
         const currentImage = history[historyIndex];
         if (!currentImage) return;
-        setIsLoading(true);
-        setError(null);
+        dispatch(setIsLoading(true));
+        dispatch(setError(null));
         try {
             const filteredImageUrl = await geminiService.generateFilteredImage(currentImage, filterPrompt);
             const newImageFile = dataURLtoFile(filteredImageUrl, `filtered-${Date.now()}.png`);
             addNewImage(newImageFile);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            dispatch(setError(err instanceof Error ? err.message : 'An unknown error occurred.'));
         } finally {
-            setIsLoading(false);
+            dispatch(setIsLoading(false));
         }
-    }, [history, historyIndex, addNewImage]);
+    }, [history, historyIndex, addNewImage, dispatch]);
     
     const handleApplyAdjustment = useCallback(async (adjustmentPrompt: string) => {
         const currentImage = history[historyIndex];
         if (!currentImage) return;
-        setIsLoading(true);
-        setError(null);
+        dispatch(setIsLoading(true));
+        dispatch(setError(null));
         try {
             const adjustedImageUrl = await geminiService.generateAdjustedImage(currentImage, adjustmentPrompt);
             const newImageFile = dataURLtoFile(adjustedImageUrl, `adjusted-${Date.now()}.png`);
             addNewImage(newImageFile);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            dispatch(setError(err instanceof Error ? err.message : 'An unknown error occurred.'));
         } finally {
-            setIsLoading(false);
+            dispatch(setIsLoading(false));
         }
-    }, [history, historyIndex, addNewImage]);
+    }, [history, historyIndex, addNewImage, dispatch]);
 
     const handleRemoveBackground = useCallback(async () => {
         const currentImage = history[historyIndex];
         if (!currentImage) return;
-        setIsLoading(true);
-        setError(null);
+        dispatch(setIsLoading(true));
+        dispatch(setError(null));
         try {
             const resultImageUrl = await geminiService.removeImageBackground(currentImage);
             const newImageFile = dataURLtoFile(resultImageUrl, `bg-removed-${Date.now()}.png`);
             addNewImage(newImageFile);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            dispatch(setError(err instanceof Error ? err.message : 'An unknown error occurred.'));
         } finally {
-            setIsLoading(false);
+            dispatch(setIsLoading(false));
         }
-    }, [history, historyIndex, addNewImage]);
+    }, [history, historyIndex, addNewImage, dispatch]);
 
     const handleApplyCrop = useCallback(() => {
         if (!completedCrop || !imgRef.current) return;
@@ -204,40 +199,40 @@ const EditorPage: React.FC<EditorPageProps> = ({
     const handleUpscale = useCallback(async (scaleFactor: number) => {
         const currentImage = history[historyIndex];
         if (!currentImage) return;
-        setIsLoading(true);
-        setError(null);
+        dispatch(setIsLoading(true));
+        dispatch(setError(null));
         try {
             const upscaledImageUrl = await geminiService.upscaleImage(currentImage, scaleFactor);
             const newImageFile = dataURLtoFile(upscaledImageUrl, `upscaled-${scaleFactor}x-${Date.now()}.png`);
             addNewImage(newImageFile);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            dispatch(setError(err instanceof Error ? err.message : 'An unknown error occurred.'));
         } finally {
-            setIsLoading(false);
+            dispatch(setIsLoading(false));
         }
-    }, [history, historyIndex, addNewImage]);
+    }, [history, historyIndex, addNewImage, dispatch]);
     
     const handleApplyArtStyle = useCallback(async (stylePrompt: string) => {
         const currentImage = history[historyIndex];
         if (!currentImage) return;
-        setIsLoading(true);
-        setError(null);
+        dispatch(setIsLoading(true));
+        dispatch(setError(null));
         try {
             const styledImageUrl = await geminiService.generateArtStyleImage(currentImage, stylePrompt);
             const newImageFile = dataURLtoFile(styledImageUrl, `styled-${Date.now()}.png`);
             addNewImage(newImageFile);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            dispatch(setError(err instanceof Error ? err.message : 'An unknown error occurred.'));
         } finally {
-            setIsLoading(false);
+            dispatch(setIsLoading(false));
         }
-    }, [history, historyIndex, addNewImage]);
+    }, [history, historyIndex, addNewImage, dispatch]);
 
     const handleMagicErase = useCallback(async () => {
         const currentImage = history[historyIndex];
         if (!currentImage || !maskDataUrl || !canvasRef.current || !imgRef.current) return;
-        setIsLoading(true);
-        setError(null);
+        dispatch(setIsLoading(true));
+        dispatch(setError(null));
         try {
             const maskCanvas = document.createElement('canvas');
             const image = imgRef.current;
@@ -251,28 +246,28 @@ const EditorPage: React.FC<EditorPageProps> = ({
             const newImageFile = dataURLtoFile(resultUrl, `erased-${Date.now()}.png`);
             addNewImage(newImageFile);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            dispatch(setError(err instanceof Error ? err.message : 'An unknown error occurred.'));
         } finally {
-            setIsLoading(false);
+            dispatch(setIsLoading(false));
         }
-    }, [history, historyIndex, maskDataUrl, addNewImage]);
+    }, [history, historyIndex, maskDataUrl, addNewImage, dispatch]);
 
     const handleHistoryNavigation = useCallback((index: number) => {
         if (index >= 0 && index < history.length) {
-            setHistoryIndex(index);
+            dispatch(setHistoryIndex(index));
             setEditHotspot(null);
             setDisplayHotspot(null);
         }
-    }, [history.length, setHistoryIndex]);
+    }, [history.length, dispatch]);
     
     const handleReset = useCallback(() => {
         if (history.length > 0) {
-            setHistoryIndex(0);
-            setError(null);
+            dispatch(setHistoryIndex(0));
+            dispatch(setError(null));
             setEditHotspot(null);
             setDisplayHotspot(null);
         }
-    }, [history, setHistoryIndex]);
+    }, [history, dispatch]);
 
     const handleExport = useCallback(() => {
         if (currentImageUrl) {
@@ -357,7 +352,7 @@ const EditorPage: React.FC<EditorPageProps> = ({
             <div className="text-center animate-fade-in bg-red-500/10 border border-red-500/20 p-8 rounded-lg max-w-2xl mx-auto flex flex-col items-center gap-4">
                 <h2 className="text-2xl font-bold text-red-300">An Error Occurred</h2>
                 <p className="text-md text-red-400">{error}</p>
-                <button onClick={() => setError(null)} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg text-md transition-colors">Try Again</button>
+                <button onClick={() => dispatch(setError(null))} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg text-md transition-colors">Try Again</button>
             </div>
         );
     }

@@ -5,19 +5,21 @@
 
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { setNfts } from '../store/nftsSlice';
 import NftCard from '../components/NftCard';
 import { MagicWandIcon, SearchIcon, SortIcon } from '../components/icons';
 import { MintedNft } from '../App';
 
-interface DashboardPageProps {
-  nfts: MintedNft[];
-}
+type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc' | 'custom';
 
-type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc';
-
-const DashboardPage: React.FC<DashboardPageProps> = ({ nfts }) => {
+const DashboardPage: React.FC = () => {
+    const dispatch: AppDispatch = useDispatch();
+    const { myNfts: nfts } = useSelector((state: RootState) => state.nfts);
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
     const filteredAndSortedNfts = useMemo(() => {
         const nftsWithOriginalIndex = nfts.map((nft, index) => ({
@@ -32,6 +34,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ nfts }) => {
             processedNfts = processedNfts.filter(nft => 
                 nft.title.toLowerCase().includes(searchTerm.toLowerCase())
             );
+        }
+
+        // If sort is 'custom', we don't sort, preserving the manual drag-and-drop order
+        if (sortBy === 'custom') {
+            return processedNfts;
         }
 
         // Sort based on the selected option
@@ -52,6 +59,39 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ nfts }) => {
         
         return processedNfts;
     }, [nfts, searchTerm, sortBy]);
+
+    const handleDragStart = (e: React.DragEvent<HTMLAnchorElement>, index: number) => {
+        setDraggedIndex(index);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLAnchorElement>) => {
+        e.preventDefault(); // Necessary to allow dropping
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLAnchorElement>, dropIndex: number) => {
+        e.preventDefault();
+        if (draggedIndex === null || draggedIndex === dropIndex) {
+            setDraggedIndex(null);
+            return;
+        }
+
+        const reorderedNfts = [...filteredAndSortedNfts];
+        const [draggedItem] = reorderedNfts.splice(draggedIndex, 1);
+        reorderedNfts.splice(dropIndex, 0, draggedItem);
+        
+        // Strip the 'originalIndex' property before dispatching to match the MintedNft type
+        const nftsToDispatch: MintedNft[] = reorderedNfts.map(({ originalIndex, ...rest }) => rest);
+
+        dispatch(setNfts(nftsToDispatch));
+        setSortBy('custom'); // Set sorting to custom to reflect the new order
+        setDraggedIndex(null);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedIndex(null);
+    };
+
 
     return (
         <div className="w-full max-w-7xl mx-auto flex flex-col items-center gap-6 animate-fade-in">
@@ -85,7 +125,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ nfts }) => {
                     <div className="relative">
                          <SortIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                          <select
-                            value={sortBy}
+                            value={sortBy === 'custom' ? 'date-desc' : sortBy} // Show a default if custom sorted
                             onChange={e => setSortBy(e.target.value as SortOption)}
                             className="w-full sm:w-auto bg-gray-900/50 border border-gray-600 rounded-md p-2 pl-10 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none appearance-none"
                          >
@@ -101,8 +141,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ nfts }) => {
 
             {filteredAndSortedNfts.length > 0 ? (
                 <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                    {filteredAndSortedNfts.map(nft => (
-                        <Link key={nft.mintDate} to={`/nft/${nft.originalIndex}`}>
+                    {filteredAndSortedNfts.map((nft, index) => (
+                        <Link 
+                            key={nft.mintDate} 
+                            to={`/nft/${nft.originalIndex}`}
+                            draggable={!searchTerm} // Disable drag-and-drop when a search is active
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, index)}
+                            onDragEnd={handleDragEnd}
+                            className={`transition-opacity duration-300 ${draggedIndex === index ? 'opacity-30' : 'opacity-100'}`}
+                            aria-label={`View details for ${nft.title}`}
+                        >
                             <NftCard nft={nft} />
                         </Link>
                     ))}

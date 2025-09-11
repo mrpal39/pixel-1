@@ -50,7 +50,7 @@ const NftDetailPage: React.FC<NftDetailPageProps> = ({ nft }) => {
                     {nft.transactionHash && (
                         <div>
                              <a 
-                                href={`https://mumbai.polygonscan.com/tx/${nft.transactionHash}`} 
+                                href={`https://polygonscan.com/tx/${nft.transactionHash}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 text-sm bg-blue-500/10 text-blue-300 font-semibold py-2 px-3 rounded-lg hover:bg-blue-500/20 transition-colors border border-blue-500/20"

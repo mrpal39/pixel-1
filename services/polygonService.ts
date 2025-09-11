@@ -8,23 +8,34 @@ import { NFTStorage, File as NFTFile } from 'nft.storage';
 import { MintingStatus } from '../App';
 
 // --- Configuration ---
-// IMPORTANT: You must replace this with your own API key from https://nft.storage/
-// 1. Go to https://nft.storage/
-// 2. Sign up or log in.
-// 3. Go to the API Keys section and create a new key.
-// 4. Paste the key here.
-// Fix: Changed to 'let' to avoid compile-time constant comparison error.
-let NFT_STORAGE_TOKEN = 'edf5b1fe.2582b0c945f047a0a7c6e28fd3585ca0'; // REPLACE WITH YOUR KEY
+// ###################################################################################
+// # IMPORTANT: SECURITY WARNING                                                     #
+// ###################################################################################
+// # You must replace the placeholder API key below with your own from NFT.Storage.  #
+// # For production applications, it is CRITICAL to move this key to a secure        #
+// # backend or environment variable to prevent it from being exposed in client-side #
+// # code.                                                                           #
+// #                                                                                 #
+// # 1. Go to https://nft.storage/                                                   #
+// # 2. Sign up or log in.                                                           #
+// # 3. Create a new API key.                                                        #
+// # 4. Replace the value below.                                                     #
+// ###################################################################################
+const NFT_STORAGE_TOKEN = 'YOUR_NFT_STORAGE_API_KEY_HERE';
 
-// This is a sample ERC-721 contract deployed on the Polygon Mumbai testnet.
-// You can view it on PolygonScan: https://mumbai.polygonscan.com/address/0x43d555F014115A8A45F4C74A764269D4a968536A
-const CONTRACT_ADDRESS = '0x43d555F014115A8A45F4C74A764269D4a968536A'; 
+// ###################################################################################
+// # IMPORTANT: CONTRACT ADDRESS                                                     #
+// ###################################################################################
+// # This is a placeholder address. You must deploy your own ERC-721 contract to     #
+// # the Polygon Mainnet and replace this address with your contract's address.      #
+// ###################################################################################
+const CONTRACT_ADDRESS = 'YOUR_MAINNET_CONTRACT_ADDRESS_HERE'; 
 const TARGET_NETWORK = {
-    chainId: '0x13881', // Hex for 80001 (Polygon Mumbai)
-    chainName: 'Polygon Mumbai Testnet',
+    chainId: '0x89', // Hex for 137 (Polygon Mainnet)
+    chainName: 'Polygon Mainnet',
     nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-    rpcUrls: ['https://rpc-mumbai.maticvigil.com/'],
-    blockExplorerUrls: ['https://mumbai.polygonscan.com/'],
+    rpcUrls: ['https://polygon-rpc.com/'],
+    blockExplorerUrls: ['https://polygonscan.com/'],
 };
 
 // --- Contract ABI ---
@@ -36,14 +47,14 @@ const contractABI = [
 
 // --- NFT.Storage Client ---
 let nftStorageClient: NFTStorage | null = null;
-if (NFT_STORAGE_TOKEN && NFT_STORAGE_TOKEN !== 'YOUR_NFT_STORAGE_API_KEY') {
+if (NFT_STORAGE_TOKEN && NFT_STORAGE_TOKEN !== 'YOUR_NFT_STORAGE_API_KEY_HERE') {
     nftStorageClient = new NFTStorage({ token: NFT_STORAGE_TOKEN });
 }
 
 /**
- * Prompts the user to switch their wallet's network to Polygon Mumbai.
+ * Prompts the user to switch their wallet's network to Polygon Mainnet.
  */
-export const switchToPolygonMumbai = async () => {    
+export const switchToPolygonMainnet = async () => {    
     if (!window.ethereum) throw new Error("No crypto wallet found");
     try {
         await window.ethereum.request({
@@ -59,12 +70,12 @@ export const switchToPolygonMumbai = async () => {
                     params: [TARGET_NETWORK],
                 });
             } catch (addError) {
-                console.error("Failed to add Polygon Mumbai network", addError);
-                throw new Error("Failed to add Polygon Mumbai network.");
+                console.error("Failed to add Polygon Mainnet network", addError);
+                throw new Error("Failed to add Polygon Mainnet network.");
             }
         } else {
             console.error("Failed to switch network", switchError);
-            throw new Error("Failed to switch to Polygon Mumbai network.");
+            throw new Error("Failed to switch to Polygon Mainnet network.");
         }
     }
 };
@@ -87,12 +98,16 @@ export const mintNftOnPolygon = async (
         throw new Error("NFT.Storage API Key is not set. Please add your key to services/polygonService.ts");
     }
 
+    if (CONTRACT_ADDRESS === 'YOUR_MAINNET_CONTRACT_ADDRESS_HERE') {
+        throw new Error("Contract address is not set. Please deploy your contract to Polygon Mainnet and update it in services/polygonService.ts");
+    }
+
     // 1. Check network and switch if necessary
     const provider = new ethers.BrowserProvider(window.ethereum);
     const network = await provider.getNetwork();
     if (network.chainId !== BigInt(TARGET_NETWORK.chainId)) {
-        setMintingStatus({ step: 'network', message: 'Requesting network switch to Polygon Mumbai...' });
-        await switchToPolygonMumbai();
+        setMintingStatus({ step: 'network', message: 'Requesting network switch to Polygon Mainnet...' });
+        await switchToPolygonMainnet();
     }
     
     // Re-initialize provider after potential network switch to ensure it's on the correct chain

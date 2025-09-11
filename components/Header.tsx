@@ -3,7 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { connectWallet, disconnectWallet } from '../store/walletActions';
 import { WalletIcon } from './icons';
 import Tooltip from './Tooltip';
 
@@ -13,17 +16,25 @@ const SparkleIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-interface HeaderProps {
-  onConnectWallet: () => void;
-  onDisconnectWallet: () => void;
-  walletAddress: string | null;
-  isEditing: boolean;
-}
-
-const Header: React.FC<HeaderProps> = ({ onConnectWallet, onDisconnectWallet, walletAddress, isEditing }) => {
+const Header: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch: AppDispatch = useDispatch();
+
+  const walletAddress = useSelector((state: RootState) => state.wallet.walletAddress);
+  const isEditing = useSelector((state: RootState) => state.editor.history.length > 0);
+
+  const handleConnect = () => {
+    dispatch(connectWallet());
+  };
+  
+  const handleDisconnect = () => {
+    setIsDropdownOpen(false);
+    dispatch(disconnectWallet());
+    navigate('/');
+  };
 
   // Effect to close dropdown if clicked outside
   useEffect(() => {
@@ -42,11 +53,6 @@ const Header: React.FC<HeaderProps> = ({ onConnectWallet, onDisconnectWallet, wa
   useEffect(() => {
       setIsDropdownOpen(false);
   }, [location]);
-
-  const handleDisconnect = () => {
-    setIsDropdownOpen(false);
-    onDisconnectWallet();
-  }
   
   return (
     <header className="w-full py-4 px-4 sm:px-8 border-b border-gray-700 bg-gray-800/30 backdrop-blur-sm sticky top-0 z-50 flex items-center justify-between">
@@ -83,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({ onConnectWallet, onDisconnectWallet, wa
           {!walletAddress ? (
             <Tooltip text={'Connect your Web3 wallet to mint NFTs.'}>
               <button 
-                onClick={onConnectWallet}
+                onClick={handleConnect}
                 className="flex items-center gap-2 bg-white/10 border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out hover:bg-white/20 hover:border-white/30 active:scale-95 text-sm"
               >
                 <WalletIcon className="w-5 h-5" />
