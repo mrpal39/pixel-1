@@ -56,27 +56,29 @@ const Header: React.FC<HeaderProps> = ({ onConnectWallet, onDisconnectWallet, wa
             Pixshop
           </h1>
       </Link>
-      <div className="flex items-center gap-3">
-        {isEditing && (
-           <Tooltip text="Return to the editor">
-             <Link
-               to="/editor"
-               className="hidden sm:block bg-white/10 border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out hover:bg-white/20 hover:border-white/30 active:scale-95 text-sm"
-             >
-               Editor
-             </Link>
-           </Tooltip>
-        )}
-        {walletAddress && (
-          <Tooltip text="View your created NFTs">
-            <Link
-              to="/dashboard"
-              className="hidden sm:block bg-white/10 border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out hover:bg-white/20 hover:border-white/30 active:scale-95 text-sm"
-            >
-              Dashboard
-            </Link>
-          </Tooltip>
-        )}
+      <div className="flex items-center gap-4">
+        <nav className="flex items-center gap-3">
+            {isEditing && (
+            <Tooltip text="Return to the editor">
+                <Link
+                to="/editor"
+                className="hidden sm:block bg-white/10 border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out hover:bg-white/20 hover:border-white/30 active:scale-95 text-sm"
+                >
+                Editor
+                </Link>
+            </Tooltip>
+            )}
+            {walletAddress && (
+            <Tooltip text="View your created NFTs">
+                <Link
+                to="/dashboard"
+                className="hidden sm:block bg-white/10 border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out hover:bg-white/20 hover:border-white/30 active:scale-95 text-sm"
+                >
+                Dashboard
+                </Link>
+            </Tooltip>
+            )}
+        </nav>
         <div className="relative" ref={dropdownRef}>
           {!walletAddress ? (
             <Tooltip text={'Connect your Web3 wallet to mint NFTs.'}>
@@ -91,9 +93,9 @@ const Header: React.FC<HeaderProps> = ({ onConnectWallet, onDisconnectWallet, wa
           ) : (
              <button 
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 bg-white/10 border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out hover:bg-white/20 hover:border-white/30 active:scale-95 text-sm"
+                className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 text-green-300 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out hover:bg-green-500/20 hover:border-green-500/40 active:scale-95 text-sm"
               >
-                <WalletIcon className="w-5 h-5 text-green-400" />
+                <WalletIcon className="w-5 h-5" />
                 {`${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`}
               </button>
           )}
