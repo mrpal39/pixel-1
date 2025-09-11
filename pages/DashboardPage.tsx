@@ -4,19 +4,18 @@
 */
 
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import NftCard from '../components/NftCard';
 import { MagicWandIcon, SearchIcon, SortIcon } from '../components/icons';
 import { MintedNft } from '../App';
 
 interface DashboardPageProps {
   nfts: MintedNft[];
-  onCreateNew: () => void;
-  onViewNftDetail: (nftIndex: number) => void;
 }
 
 type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc';
 
-const DashboardPage: React.FC<DashboardPageProps> = ({ nfts, onCreateNew, onViewNftDetail }) => {
+const DashboardPage: React.FC<DashboardPageProps> = ({ nfts }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('date-desc');
 
@@ -61,13 +60,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ nfts, onCreateNew, onView
                     <h1 className="text-4xl font-bold text-white">My Creations</h1>
                     <p className="text-lg text-gray-400 mt-1">A gallery of your minted NFTs.</p>
                 </div>
-                 <button
-                    onClick={onCreateNew}
+                 <Link
+                    to="/"
                     className="flex items-center justify-center bg-gradient-to-br from-blue-600 to-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/40 hover:-translate-y-px active:scale-95"
                 >
                     <MagicWandIcon className="w-5 h-5 mr-2" />
                     Create New NFT
-                </button>
+                </Link>
             </div>
 
             {/* Search and Filter Controls */}
@@ -103,7 +102,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ nfts, onCreateNew, onView
             {filteredAndSortedNfts.length > 0 ? (
                 <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {filteredAndSortedNfts.map(nft => (
-                        <NftCard key={nft.mintDate} nft={nft} onClick={() => onViewNftDetail(nft.originalIndex)} />
+                        <Link key={nft.mintDate} to={`/nft/${nft.originalIndex}`}>
+                            <NftCard nft={nft} />
+                        </Link>
                     ))}
                 </div>
             ) : (
@@ -115,13 +116,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ nfts, onCreateNew, onView
                       {searchTerm ? 'Try a different search term.' : 'Start creating to see your NFTs appear here.'}
                     </p>
                     {!searchTerm && (
-                      <button
-                          onClick={onCreateNew}
+                      <Link
+                          to="/"
                           className="mt-4 flex items-center justify-center bg-gradient-to-br from-blue-600 to-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/40 hover:-translate-y-px active:scale-95"
                       >
                           <MagicWandIcon className="w-5 h-5 mr-2" />
                           Create New NFT
-                      </button>
+                      </Link>
                     )}
                 </div>
             )}

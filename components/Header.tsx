@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useRef, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { WalletIcon } from './icons';
 import Tooltip from './Tooltip';
 
@@ -16,14 +17,13 @@ interface HeaderProps {
   onConnectWallet: () => void;
   onDisconnectWallet: () => void;
   walletAddress: string | null;
-  onNavigateToDashboard: () => void;
-  onNavigateHome: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onConnectWallet, onDisconnectWallet, walletAddress, onNavigateToDashboard, onNavigateHome }) => {
+const Header: React.FC<HeaderProps> = ({ onConnectWallet, onDisconnectWallet, walletAddress }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+  const location = useLocation();
+
   // Effect to close dropdown if clicked outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -37,6 +37,11 @@ const Header: React.FC<HeaderProps> = ({ onConnectWallet, onDisconnectWallet, wa
     };
   }, []);
 
+  // Close dropdown on navigation
+  useEffect(() => {
+      setIsDropdownOpen(false);
+  }, [location]);
+
   const handleDisconnect = () => {
     setIsDropdownOpen(false);
     onDisconnectWallet();
@@ -44,21 +49,21 @@ const Header: React.FC<HeaderProps> = ({ onConnectWallet, onDisconnectWallet, wa
   
   return (
     <header className="w-full py-4 px-4 sm:px-8 border-b border-gray-700 bg-gray-800/30 backdrop-blur-sm sticky top-0 z-50 flex items-center justify-between">
-      <button onClick={onNavigateHome} className="flex items-center gap-3">
+      <Link to="/" className="flex items-center gap-3">
           <SparkleIcon className="w-6 h-6 text-blue-400" />
           <h1 className="text-xl font-bold tracking-tight text-gray-100">
             Pixshop
           </h1>
-      </button>
+      </Link>
       <div className="flex items-center gap-3">
         {walletAddress && (
           <Tooltip text="View your created NFTs">
-            <button
-              onClick={onNavigateToDashboard}
+            <Link
+              to="/dashboard"
               className="hidden sm:block bg-white/10 border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out hover:bg-white/20 hover:border-white/30 active:scale-95 text-sm"
             >
               Dashboard
-            </button>
+            </Link>
           </Tooltip>
         )}
         <div className="relative" ref={dropdownRef}>

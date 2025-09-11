@@ -12,14 +12,15 @@ interface NftCardProps {
         title: string;
         properties: Trait[];
     };
-    onClick: () => void;
+    // Fix: Added optional onClick prop to handle click events passed from parent components.
+    onClick?: () => void;
 }
 
 const NftCard: React.FC<NftCardProps> = ({ nft, onClick }) => {
     return (
-        <button 
+        <div
             onClick={onClick}
-            className="bg-gray-800/50 rounded-lg overflow-hidden border border-gray-700/80 transition-all duration-300 hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500 text-left"
+            className="bg-gray-800/50 rounded-lg overflow-hidden border border-gray-700/80 transition-all duration-300 hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500 text-left h-full cursor-pointer"
         >
             <img src={nft.imageUrl} alt={nft.title} className="w-full aspect-square object-cover" />
             <div className="p-4">
@@ -35,7 +36,7 @@ const NftCard: React.FC<NftCardProps> = ({ nft, onClick }) => {
                     </div>
                 )}
             </div>
-        </button>
+        </div>
     );
 };
 

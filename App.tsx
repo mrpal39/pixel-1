@@ -38,6 +38,7 @@ if (typeof window.ethereum === 'undefined') {
 
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useParams, useLocation } from "react-router-dom";
 import * as geminiService from './services/geminiService';
 import Header from './components/Header';
 import MintingModal from './components/MintingModal';
@@ -85,11 +86,6 @@ export type MintedNft = {
   imageUrl: string; // Data URL of the minted image
   mintDate: number; // Timestamp of when it was minted
 };
-export type Route = 
-    | { name: 'start' }
-    | { name: 'editor' }
-    | { name: 'dashboard' }
-    | { name: 'nft-detail', params: { nftIndex: number } };
 
 const App: React.FC = () => {
   const [history, setHistory] = useState<File[]>([]);
@@ -103,8 +99,9 @@ const App: React.FC = () => {
   const [nftTraits, setNftTraits] = useState<Trait[]>([]);
   const [myNfts, setMyNfts] = useState<MintedNft[]>([]);
   
-  // App navigation state
-  const [route, setRoute] = useState<Route>({ name: 'start' });
+  // App navigation
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Effect to handle wallet events: account changes and silent reconnect
   useEffect(() => {
@@ -130,7 +127,7 @@ const App: React.FC = () => {
         setWalletAddress(accounts[0]);
       } else {
         setWalletAddress(null);
-        setRoute({ name: 'start' });
+        navigate('/');
       }
     };
 
@@ -141,7 +138,7 @@ const App: React.FC = () => {
         ethereum.removeListener('accountsChanged', handleAccountsChanged);
       }
     };
-  }, []);
+  }, [navigate]);
 
   // Effect to load user's created NFTs from localStorage when wallet connects
   useEffect(() => {
@@ -174,7 +171,10 @@ const App: React.FC = () => {
             );
             setHistory(fileHistory);
             setHistoryIndex(savedSession.index);
-            setRoute({ name: 'editor' });
+            // Only navigate if not already on a page (avoid overriding deep links)
+            if (location.pathname === '/') {
+              navigate('/editor');
+            }
           }
         } catch (e) {
           console.error("Failed to load session from localStorage", e);
@@ -184,7 +184,7 @@ const App: React.FC = () => {
       setIsLoading(false); // Finished loading attempt
     };
     loadSession();
-  }, []);
+  }, [location.pathname, navigate]);
 
   // Effect to save session to localStorage whenever history or the current index changes
   useEffect(() => {
@@ -224,9 +224,9 @@ const App: React.FC = () => {
     setError(null);
     setHistory([file]);
     setHistoryIndex(0);
-    setRoute({ name: 'editor' });
+    navigate('/editor');
     setNftTraits([]);
-  }, []);
+  }, [navigate]);
 
   const handleGenerateImage = useCallback(async (generationPrompt: string) => {
     if (!generationPrompt.trim()) {
@@ -240,7 +240,7 @@ const App: React.FC = () => {
         const newImageFile = dataURLtoFile(generatedImageUrl, `generated-${Date.now()}.png`);
         setHistory([newImageFile]);
         setHistoryIndex(0);
-        setRoute({ name: 'editor' });
+        navigate('/editor');
         setNftTraits([]);
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
@@ -249,21 +249,21 @@ const App: React.FC = () => {
     } finally {
         setIsLoading(false);
     }
-  }, []);
+  }, [navigate]);
 
   const handleCharacterFinalized = useCallback((imageFile: File, traits: Trait[]) => {
       setHistory([imageFile]);
       setHistoryIndex(0);
-      setRoute({ name: 'editor' });
+      navigate('/editor');
       setNftTraits(traits);
-  }, []);
+  }, [navigate]);
 
   const handleUploadNew = useCallback(() => {
       setHistory([]);
       setHistoryIndex(-1);
       setError(null);
-      setRoute({ name: 'start' });
-  }, []);
+      navigate('/');
+  }, [navigate]);
   
   const handleConnectWallet = async () => {
     if (typeof window.ethereum !== 'undefined') {
@@ -281,7 +281,7 @@ const App: React.FC = () => {
 
   const handleDisconnectWallet = () => {
     setWalletAddress(null);
-    setRoute({ name: 'start' });
+    navigate('/');
   };
 
   const handleMint = async (metadata: { title: string, description: string, properties: Trait[], royalties: number }) => {
@@ -314,7 +314,7 @@ const App: React.FC = () => {
         setMyNfts(updatedCreations);
         setIsMintingModalOpen(false);
         alert(`Congratulations! Your NFT "${metadata.title}" has been successfully minted.`);
-        setRoute({ name: 'dashboard' });
+        navigate('/dashboard');
 
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
@@ -324,97 +324,6 @@ const App: React.FC = () => {
     }
   };
     
-  const navigateToDashboard = () => {
-      if (walletAddress) {
-          setRoute({ name: 'dashboard' });
-      } else {
-          handleConnectWallet();
-      }
-  }
-  
-  const navigateHome = () => {
-    // FIX: Corrected a TypeScript error. The original code created an object that TypeScript couldn't
-    // confirm was part of the `Route` union type. This version explicitly creates a valid route in each case.
-    if (history.length > 0) {
-      setRoute({ name: 'editor' });
-    } else {
-      setRoute({ name: 'start' });
-    }
-  }
-
-  const renderContent = () => {
-    if (isLoading) {
-       return (
-          <div className="flex flex-col items-center justify-center gap-4">
-              <Spinner />
-              <p className="text-gray-300">Loading...</p>
-          </div>
-        );
-    }
-
-    if (error) {
-       return (
-           <div className="text-center animate-fade-in bg-red-500/10 border border-red-500/20 p-8 rounded-lg max-w-2xl mx-auto flex flex-col items-center gap-4">
-            <h2 className="text-2xl font-bold text-red-300">An Error Occurred</h2>
-            <p className="text-md text-red-400">{error}</p>
-            <button
-                onClick={() => setError(null)}
-                className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg text-md transition-colors"
-              >
-                Try Again
-            </button>
-          </div>
-        );
-    }
-    
-    switch (route.name) {
-        case 'dashboard':
-            return <DashboardPage 
-                        nfts={myNfts} 
-                        onCreateNew={() => setRoute({ name: 'start' })}
-                        onViewNftDetail={(nftIndex) => setRoute({ name: 'nft-detail', params: { nftIndex } })}
-                    />;
-        
-        case 'nft-detail':
-            const nft = myNfts[route.params.nftIndex];
-            if (!nft) {
-                setRoute({ name: 'dashboard' });
-                return null;
-            }
-            return <NftDetailPage nft={nft} onBack={() => setRoute({ name: 'dashboard' })} />;
-
-        case 'editor':
-             if (historyIndex < 0 || !history[historyIndex]) {
-                setRoute({ name: 'start' });
-                return null;
-            }
-            return <EditorPage 
-                history={history}
-                historyIndex={historyIndex}
-                setHistory={setHistory}
-                setHistoryIndex={setHistoryIndex}
-                addImageToHistory={addImageToHistory}
-                onUploadNew={handleUploadNew}
-                onMint={() => {
-                  if (walletAddress) {
-                    setIsMintingModalOpen(true);
-                  } else {
-                    handleConnectWallet();
-                  }
-                }}
-            />;
-        
-        case 'start':
-        default:
-              return <HomePage
-                onFileSelect={(files) => files && files[0] && handleImageUpload(files[0])}
-                onGenerateImage={handleGenerateImage}
-                onCharacterFinalized={handleCharacterFinalized}
-                isLoading={isLoading}
-              />;
-    }
-  };
-  
   const currentImageUrl = historyIndex >= 0 ? URL.createObjectURL(history[historyIndex]) : null;
   useEffect(() => {
     return () => {
@@ -424,6 +333,79 @@ const App: React.FC = () => {
     }
   }, [currentImageUrl]);
 
+  const NftDetailWrapper: React.FC = () => {
+      const { index } = useParams();
+      if (!walletAddress) return <Navigate to="/" replace />;
+      const nftIndex = parseInt(index || '', 10);
+      if (isNaN(nftIndex)) return <Navigate to="/dashboard" replace />;
+      const nft = myNfts[nftIndex];
+      if (!nft) return <Navigate to="/dashboard" replace />;
+      return <NftDetailPage nft={nft} />;
+  };
+
+  const renderAppContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-4">
+          <Spinner />
+          <p className="text-gray-300">Loading...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="text-center animate-fade-in bg-red-500/10 border border-red-500/20 p-8 rounded-lg max-w-2xl mx-auto flex flex-col items-center gap-4">
+          <h2 className="text-2xl font-bold text-red-300">An Error Occurred</h2>
+          <p className="text-md text-red-400">{error}</p>
+          <button
+            onClick={() => setError(null)}
+            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg text-md transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <Routes>
+        <Route path="/" element={
+          <HomePage
+            onFileSelect={(files) => files && files[0] && handleImageUpload(files[0])}
+            onGenerateImage={handleGenerateImage}
+            onCharacterFinalized={handleCharacterFinalized}
+            isLoading={isLoading}
+          />
+        } />
+        <Route path="/editor" element={
+          historyIndex < 0 || !history[historyIndex] ? <Navigate to="/" replace /> : (
+            <EditorPage 
+              history={history}
+              historyIndex={historyIndex}
+              setHistory={setHistory}
+              setHistoryIndex={setHistoryIndex}
+              addImageToHistory={addImageToHistory}
+              onUploadNew={handleUploadNew}
+              onMint={() => {
+                if (walletAddress) {
+                  setIsMintingModalOpen(true);
+                } else {
+                  handleConnectWallet();
+                }
+              }}
+            />
+          )
+        } />
+        <Route path="/dashboard" element={
+            !walletAddress ? <Navigate to="/" replace /> : <DashboardPage nfts={myNfts} /> 
+        } />
+        <Route path="/nft/:index" element={<NftDetailWrapper />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  };
+
 
   return (
     <div className="min-h-screen text-gray-100 flex flex-col">
@@ -431,11 +413,9 @@ const App: React.FC = () => {
         onConnectWallet={handleConnectWallet}
         onDisconnectWallet={handleDisconnectWallet}
         walletAddress={walletAddress}
-        onNavigateToDashboard={navigateToDashboard}
-        onNavigateHome={navigateHome}
       />
       <main className={`flex-grow w-full max-w-[1600px] mx-auto p-4 md:p-8 flex justify-center items-start`}>
-        {renderContent()}
+        {renderAppContent()}
       </main>
       {isMintingModalOpen && currentImageUrl && (
         <MintingModal
