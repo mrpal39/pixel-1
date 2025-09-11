@@ -196,8 +196,27 @@ const App: React.FC = () => {
           return;
       }
 
+      const contractAddress = localStorage.getItem('pixshop-contract-address');
+      const networkName = localStorage.getItem('pixshop-network');
+
+      if (!contractAddress || !networkName) {
+          setStatus({ step: 'error', message: 'Please configure your Contract Address and Network in the "Minter" tab on the Home page before minting.' });
+          return;
+      }
+
+      // Fix: Validate networkName from localStorage to ensure it matches the expected type.
+      if (networkName !== 'polygon-mainnet' && networkName !== 'polygon-mumbai') {
+          setStatus({ step: 'error', message: `Invalid network configured: "${networkName}". Please select a valid network in the "Minter" tab.` });
+          return;
+      }
+
       try {
-          const receipt = await polygonService.mintNftOnPolygon(currentImageFile, metadata, setStatus);
+          const receipt = await polygonService.mintNftOnPolygon(
+            currentImageFile, 
+            metadata, 
+            setStatus, 
+            { contractAddress, networkName }
+          );
           
           if (!receipt || !receipt.hash) {
               throw new Error("Transaction failed or hash not found.");

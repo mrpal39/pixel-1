@@ -23,20 +23,24 @@ import { MintingStatus } from '../App';
 // ###################################################################################
 const NFT_STORAGE_TOKEN = 'YOUR_NFT_STORAGE_API_KEY_HERE';
 
-// ###################################################################################
-// # IMPORTANT: CONTRACT ADDRESS                                                     #
-// ###################################################################################
-// # This is a placeholder address. You must deploy your own ERC-721 contract to     #
-// # the Polygon Mainnet and replace this address with your contract's address.      #
-// ###################################################################################
-const CONTRACT_ADDRESS = 'YOUR_MAINNET_CONTRACT_ADDRESS_HERE'; 
-const TARGET_NETWORK = {
-    chainId: '0x89', // Hex for 137 (Polygon Mainnet)
-    chainName: 'Polygon Mainnet',
-    nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-    rpcUrls: ['https://polygon-rpc.com/'],
-    blockExplorerUrls: ['https://polygonscan.com/'],
+const NETWORKS = {
+    'polygon-mainnet': {
+        chainId: '0x89', // Hex for 137 (Polygon Mainnet)
+        chainName: 'Polygon Mainnet',
+        nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+        rpcUrls: ['https://polygon-rpc.com/'],
+        blockExplorerUrls: ['https://polygonscan.com/'],
+    },
+    'polygon-mumbai': {
+        chainId: '0x13881', // Hex for 80001 (Mumbai)
+        chainName: 'Polygon Mumbai Testnet',
+        nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+        rpcUrls: ['https://rpc-mumbai.maticvigil.com/'],
+        blockExplorerUrls: ['https://mumbai.polygonscan.com/'],
+    }
 };
+
+type NetworkName = keyof typeof NETWORKS;
 
 // --- Contract ABI ---
 // A minimal ABI for a standard ERC-721 contract with a safeMint function.
@@ -52,14 +56,18 @@ if (NFT_STORAGE_TOKEN && NFT_STORAGE_TOKEN !== 'YOUR_NFT_STORAGE_API_KEY_HERE') 
 }
 
 /**
- * Prompts the user to switch their wallet's network to Polygon Mainnet.
+ * Prompts the user to switch their wallet's network.
+ * @param networkName The key of the network to switch to (e.g., 'polygon-mainnet').
  */
-export const switchToPolygonMainnet = async () => {    
+export const switchToNetwork = async (networkName: NetworkName) => {    
     if (!window.ethereum) throw new Error("No crypto wallet found");
+    const targetNetwork = NETWORKS[networkName];
+    if (!targetNetwork) throw new Error(`Invalid network name: ${networkName}`);
+
     try {
         await window.ethereum.request({
             method: 'wallet_switchEthereumChain',
-            params: [{ chainId: TARGET_NETWORK.chainId }],
+            params: [{ chainId: targetNetwork.chainId }],
         });
     } catch (switchError: any) {
         // This error code indicates that the chain has not been added to MetaMask.
@@ -67,56 +75,96 @@ export const switchToPolygonMainnet = async () => {
             try {
                 await window.ethereum.request({
                     method: 'wallet_addEthereumChain',
-                    params: [TARGET_NETWORK],
+                    params: [targetNetwork],
                 });
             } catch (addError) {
-                console.error("Failed to add Polygon Mainnet network", addError);
-                throw new Error("Failed to add Polygon Mainnet network.");
+                console.error(`Failed to add ${targetNetwork.chainName} network`, addError);
+                throw new Error(`Failed to add ${targetNetwork.chainName} network.`);
             }
         } else {
             console.error("Failed to switch network", switchError);
-            throw new Error("Failed to switch to Polygon Mainnet network.");
+            throw new Error(`Failed to switch to ${targetNetwork.chainName} network.`);
         }
     }
 };
 
 /**
- * Mints an NFT on the Polygon blockchain.
+ * Mints an NFT from a pre-uploaded metadata URL.
+ * This is the core minting function used for batch minting.
+ */
+export const mintFromMetadataUrl = async (options: {
+    contractAddress: string,
+    networkName: NetworkName,
+    toAddress: string,
+    metadataUrl: string
+}): Promise<ethers.ContractTransactionReceipt | null> => {
+    const { contractAddress, networkName, toAddress, metadataUrl } = options;
+
+    if (!window.ethereum) throw new Error("No crypto wallet found");
+    if (!ethers.isAddress(contractAddress)) throw new Error("Invalid contract address.");
+
+    // 1. Check network and switch if necessary
+    await switchToNetwork(networkName);
+    
+    // 2. Setup ethers and contract
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+    try {
+        // 3. Call the smart contract's mint function
+        const mintTx = await contract.safeMint(toAddress, metadataUrl);
+        
+        // 4. Wait for the transaction to be mined
+        const receipt = await mintTx.wait();
+        
+        if (!receipt) {
+            throw new Error("Transaction failed to confirm.");
+        }
+
+        console.log('Transaction successful:', receipt);
+        return receipt;
+    } catch (error: any) {
+        console.error("Minting from metadata URL failed:", error);
+        if (error.code === 'ACTION_REJECTED') {
+            throw new Error("Transaction rejected in wallet.");
+        }
+        const reason = error.reason || error.data?.message || error.message;
+        throw new Error(reason || "An unknown error occurred during minting.");
+    }
+}
+
+
+/**
+ * Mints a single NFT, including uploading assets to IPFS.
+ * Used for the main editor-to-mint flow.
  * @param imageFile The image file to be minted.
  * @param metadata The NFT metadata (title, description, properties).
  * @param setMintingStatus A callback to update the UI with the minting progress.
+ * @param config The contract address and network name.
  * @returns A promise that resolves with the transaction receipt.
  */
 export const mintNftOnPolygon = async (
     imageFile: File,
     metadata: { title: string; description: string; properties: any[] },
-    setMintingStatus: (status: MintingStatus) => void
+    setMintingStatus: (status: MintingStatus) => void,
+    config: { contractAddress: string; networkName: NetworkName }
 ): Promise<ethers.ContractTransactionReceipt | null> => {
     if (!window.ethereum) throw new Error("No crypto wallet found");
-
     if (!nftStorageClient) {
         throw new Error("NFT.Storage API Key is not set. Please add your key to services/polygonService.ts");
     }
-
-    if (CONTRACT_ADDRESS === 'YOUR_MAINNET_CONTRACT_ADDRESS_HERE') {
-        throw new Error("Contract address is not set. Please deploy your contract to Polygon Mainnet and update it in services/polygonService.ts");
+    if (!ethers.isAddress(config.contractAddress)) {
+        throw new Error("Invalid Contract Address provided. Please configure it in the Minter tab.");
     }
 
-    // 1. Check network and switch if necessary
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const network = await provider.getNetwork();
-    if (network.chainId !== BigInt(TARGET_NETWORK.chainId)) {
-        setMintingStatus({ step: 'network', message: 'Requesting network switch to Polygon Mainnet...' });
-        await switchToPolygonMainnet();
-    }
+    setMintingStatus({ step: 'network', message: `Requesting network switch to ${NETWORKS[config.networkName].chainName}...` });
+    await switchToNetwork(config.networkName);
     
-    // Re-initialize provider after potential network switch to ensure it's on the correct chain
-    const updatedProvider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await updatedProvider.getSigner();
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer);
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
     try {
-        // 2. Upload image and metadata to IPFS via NFT.Storage
         setMintingStatus({ step: 'uploading', message: 'Uploading asset to decentralized storage (IPFS)...' });
         const imageForNFT = new NFTFile([imageFile], imageFile.name, { type: imageFile.type });
         
@@ -130,28 +178,22 @@ export const mintNftOnPolygon = async (
         const metadataUrl = storedMetadata.url;
         console.log('Metadata stored at:', metadataUrl);
 
-        // 3. Call the smart contract's mint function
         setMintingStatus({ step: 'confirming', message: 'Please confirm the transaction in your wallet...' });
-        const mintTx = await contract.safeMint(await signer.getAddress(), metadataUrl);
         
-        // 4. Wait for the transaction to be mined
-        setMintingStatus({ step: 'minting', message: `Minting in progress... waiting for blockchain confirmation. Transaction hash: ${mintTx.hash}` });
-        const receipt = await mintTx.wait();
-        
-        if (!receipt) {
-            throw new Error("Transaction failed to confirm.");
-        }
+        const receipt = await mintFromMetadataUrl({
+            contractAddress: config.contractAddress,
+            networkName: config.networkName,
+            toAddress: await signer.getAddress(),
+            metadataUrl: metadataUrl
+        });
 
-        console.log('Transaction successful:', receipt);
+        setMintingStatus({ step: 'minting', message: `Minting in progress... waiting for blockchain confirmation. Transaction hash: ${receipt?.hash}` });
+
         return receipt;
 
     } catch (error: any) {
         console.error("Minting failed:", error);
-        if (error.code === 'ACTION_REJECTED') {
-            throw new Error("Transaction rejected in wallet.");
-        }
-        // Attempt to extract a more specific reason from the error object
-        const reason = error.reason || error.data?.message || error.message;
-        throw new Error(reason || "An unknown error occurred during minting.");
+        // mintFromMetadataUrl already formats the error, so we can just re-throw it.
+        throw error;
     }
 };

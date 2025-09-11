@@ -163,7 +163,7 @@ const DashboardPage: React.FC = () => {
                       {searchTerm ? 'No Results Found' : 'Your collection is empty.'}
                     </h2>
                     <p className="text-gray-400">
-                      {searchTerm ? 'Try a different search term.' : 'Start creating to see your NFTs appear here.'}
+                      {searchTerm ? 'Try a different search term.' : 'Upload your first item and mint an NFT to get started!'}
                     </p>
                     {!searchTerm && (
                       <Link
