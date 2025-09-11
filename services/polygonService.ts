@@ -29,6 +29,13 @@ const NETWORKS = {
         nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
         rpcUrls: ['https://rpc-mumbai.maticvigil.com/'],
         blockExplorerUrls: ['https://mumbai.polygonscan.com/'],
+    },
+    'mega-testnet': {
+        chainId: '0x18C6', // Hex for 6342
+        chainName: 'Mega Testnet',
+        nativeCurrency: { name: 'MegaETH', symbol: 'MegaETH', decimals: 18 },
+        rpcUrls: ['https://carrot.megaeth.com/rpc'],
+        blockExplorerUrls: ['https://megaexplorer.xyz/'],
     }
 };
 

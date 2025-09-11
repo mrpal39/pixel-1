@@ -30,7 +30,7 @@ const CollectionMinter: React.FC = () => {
     const { walletAddress } = useSelector((state: RootState) => state.wallet);
     const [contractAddress, setContractAddress] = useState('');
     // Fix: Explicitly type the network state to match expected values.
-    const [network, setNetwork] = useState<'polygon-mainnet' | 'polygon-mumbai'>('polygon-mainnet');
+    const [network, setNetwork] = useState<'polygon-mainnet' | 'polygon-mumbai' | 'mega-testnet'>('polygon-mainnet');
     const [parsedData, setParsedData] = useState<CsvData[]>([]);
     const [fileName, setFileName] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -54,7 +54,7 @@ const CollectionMinter: React.FC = () => {
         setContractAddress(savedContract || DEFAULT_CONTRACT_ADDRESS);
 
         // Fix: Validate the saved network from localStorage before setting state.
-        if (savedNetwork === 'polygon-mainnet' || savedNetwork === 'polygon-mumbai') {
+        if (savedNetwork === 'polygon-mainnet' || savedNetwork === 'polygon-mumbai' || savedNetwork === 'mega-testnet') {
             setNetwork(savedNetwork);
         } else {
             setNetwork(DEFAULT_NETWORK);
@@ -69,7 +69,7 @@ const CollectionMinter: React.FC = () => {
     const handleNetworkChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newNetwork = e.target.value;
         // Fix: Validate the network from the select input before setting state.
-        if (newNetwork === 'polygon-mainnet' || newNetwork === 'polygon-mumbai') {
+        if (newNetwork === 'polygon-mainnet' || newNetwork === 'polygon-mumbai' || newNetwork === 'mega-testnet') {
             setNetwork(newNetwork);
             localStorage.setItem('pixshop-network', newNetwork);
         }
@@ -201,6 +201,7 @@ const CollectionMinter: React.FC = () => {
                     >
                         <option value="polygon-mainnet">Polygon Mainnet</option>
                         <option value="polygon-mumbai">Polygon Mumbai (Testnet)</option>
+                        <option value="mega-testnet">Mega Testnet</option>
                     </select>
                 </div>
             </div>

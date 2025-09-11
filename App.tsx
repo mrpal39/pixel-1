@@ -198,7 +198,7 @@ const App: React.FC = () => {
       }
 
       const contractAddress = localStorage.getItem('pixshop-contract-address') || DEFAULT_CONTRACT_ADDRESS;
-      const networkName = (localStorage.getItem('pixshop-network') as 'polygon-mainnet' | 'polygon-mumbai' | null) || DEFAULT_NETWORK;
+      const networkName = (localStorage.getItem('pixshop-network') as 'polygon-mainnet' | 'polygon-mumbai' | 'mega-testnet' | null) || DEFAULT_NETWORK;
 
       if (!contractAddress || contractAddress === '0x...' || contractAddress.trim() === '') {
           setStatus({ step: 'error', message: 'Contract address is not configured. Please set it in the "Minter" tab on the Home page, or update the placeholder in the services/polygonService.ts file.' });
@@ -206,7 +206,7 @@ const App: React.FC = () => {
       }
 
       // Fix: Validate networkName from localStorage to ensure it matches the expected type.
-      if (networkName !== 'polygon-mainnet' && networkName !== 'polygon-mumbai') {
+      if (networkName !== 'polygon-mainnet' && networkName !== 'polygon-mumbai' && networkName !== 'mega-testnet') {
           setStatus({ step: 'error', message: `Invalid network configured: "${networkName}". Please select a valid network in the "Minter" tab.` });
           return;
       }
