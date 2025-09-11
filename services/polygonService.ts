@@ -13,7 +13,8 @@ import { MintingStatus } from '../App';
 // 2. Sign up or log in.
 // 3. Go to the API Keys section and create a new key.
 // 4. Paste the key here.
-const NFT_STORAGE_TOKEN = 'YOUR_NFT_STORAGE_API_KEY'; // REPLACE WITH YOUR KEY
+// Fix: Changed to 'let' to avoid compile-time constant comparison error.
+let NFT_STORAGE_TOKEN = 'edf5b1fe.2582b0c945f047a0a7c6e28fd3585ca0'; // REPLACE WITH YOUR KEY
 
 // This is a sample ERC-721 contract deployed on the Polygon Mumbai testnet.
 // You can view it on PolygonScan: https://mumbai.polygonscan.com/address/0x43d555F014115A8A45F4C74A764269D4a968536A
@@ -79,11 +80,11 @@ export const mintNftOnPolygon = async (
     imageFile: File,
     metadata: { title: string; description: string; properties: any[] },
     setMintingStatus: (status: MintingStatus) => void
-): Promise<ethers.ContractTransactionReceipt> => {
+): Promise<ethers.ContractTransactionReceipt | null> => {
     if (!window.ethereum) throw new Error("No crypto wallet found");
 
     if (!nftStorageClient) {
-        throw new Error("NFT.Storage API Key is not set. Please add it in services/polygonService.ts");
+        throw new Error("NFT.Storage API Key is not set. Please add your key to services/polygonService.ts");
     }
 
     // 1. Check network and switch if necessary

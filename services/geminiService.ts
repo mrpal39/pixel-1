@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+// Fix: Import Modality for image editing config.
+import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
 
 // Helper function to convert a File object to a Gemini API Part
 const fileToPart = async (file: File): Promise<{ inlineData: { mimeType: string; data: string; } }> => {
@@ -93,7 +94,7 @@ export const generateImageFromText = async (
     // Handle cases where no image is returned
     // Fix for Error on line 94, 96, 97: Cast response to 'any' to bypass potential type definition issues with promptFeedback.
     const safetyRatings = (response as any).promptFeedback?.safetyRatings;
-    if (safetyRatings && safetyRatings.some(r => r.blocked)) {
+    if (safetyRatings && safetyRatings.some((r: { blocked: any; }) => r.blocked)) {
         const reason = (response as any).promptFeedback.blockReason || 'Safety settings';
         const message = (response as any).promptFeedback.blockReasonMessage || 'Your prompt may have violated the safety policy.';
         const errorMessage = `Image generation was blocked. Reason: ${reason}. ${message}`;
@@ -139,6 +140,10 @@ Output: Return ONLY the final edited image. Do not return text.`;
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: { parts: [originalImagePart, textPart] },
+        // Fix: Add required responseModalities config for image editing.
+        config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+        },
     });
     console.log('Received response from model.', response);
 
@@ -173,6 +178,10 @@ Output: Return ONLY the final filtered image. Do not return text.`;
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: { parts: [originalImagePart, textPart] },
+        // Fix: Add required responseModalities config for image editing.
+        config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+        },
     });
     console.log('Received response from model for filter.', response);
     
@@ -211,6 +220,10 @@ Output: Return ONLY the final adjusted image. Do not return text.`;
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: { parts: [originalImagePart, textPart] },
+        // Fix: Add required responseModalities config for image editing.
+        config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+        },
     });
     console.log('Received response from model for adjustment.', response);
     
@@ -238,6 +251,10 @@ Return ONLY the final image with a transparent background. Do not return text.`;
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: { parts: [originalImagePart, textPart] },
+        // Fix: Add required responseModalities config for image editing.
+        config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+        },
     });
     console.log('Received response from model for background removal.', response);
     
@@ -275,6 +292,10 @@ Output: Return ONLY the final edited image. Do not return text.`;
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: { parts: [originalImagePart, maskImagePart, textPart] },
+        // Fix: Add required responseModalities config for image editing.
+        config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+        },
     });
     console.log('Received response from model for magic erase.', response);
     
@@ -311,6 +332,10 @@ Output: Return ONLY the final upscaled image. Do not return text.`;
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: { parts: [originalImagePart, textPart] },
+        // Fix: Add required responseModalities config for image editing.
+        config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+        },
     });
     console.log(`Received response from model for ${scaleFactor}x upscale.`, response);
     
@@ -341,6 +366,10 @@ Output: Return ONLY the final stylized image. Do not return text.`;
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: { parts: [originalImagePart, textPart] },
+        // Fix: Add required responseModalities config for image editing.
+        config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+        },
     });
     console.log('Received response from model for art style.', response);
     
